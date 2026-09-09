@@ -1,0 +1,47 @@
+[project]
+# "clicked" and "clicked-evidence" were both actually available on PyPI --
+# no squatting to work around here, for once. The installed package stays
+# `clicked` either way (an installed *command* isn't relevant: this is a
+# library, imported from a caller's own browser-automation script, not a
+# CLI tool -- see README's "Why no CLI").
+name = "clicked-evidence"
+version = "0.1.0"
+description = "Prove what one browser interaction actually did -- every network request it made, and optionally what changed on a local backing store."
+requires-python = ">=3.10"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+keywords = ["browser", "playwright", "testing", "evidence", "provenance", "e2e"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+]
+# Zero hard dependencies -- Playwright is duck-typed, never imported here,
+# so whichever version (or, in principle, another library with the same
+# .on()/.remove_listener() shape) the caller already depends on is used
+# as-is. See the `filesystem` extra below for the one real dependency
+# this package does have, and why it's optional.
+dependencies = []
+
+urls.Homepage = "https://github.com/MaXiMo000/clicked"
+urls.Source = "https://github.com/MaXiMo000/clicked"
+urls.Issues = "https://github.com/MaXiMo000/clicked/issues"
+urls.Changelog = "https://github.com/MaXiMo000/clicked/releases"
+
+[project.optional-dependencies]
+# receipt.snapshot's real snapshot()/diff() core, reused (not
+# reimplemented) for the optional watch_dir feature -- the same "third
+# generation of receipt" pattern custody already uses. Optional because
+# network capture alone is useful on its own, for a purely client-side
+# interaction with no local backend to watch.
+filesystem = ["receipt-evidence>=0.1.0"]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["clicked*"]
