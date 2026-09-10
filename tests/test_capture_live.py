@@ -32,12 +32,20 @@ from clicked.capture import capture
 
 _PAGE_HTML = b"""<!doctype html><html><body>
 <button id="save" onclick="save()">Save</button>
+<button id="login" onclick="login()">Login</button>
 <script>
 async function save() {
   await fetch('/api/save', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({name: 'ada'}),
+  });
+}
+async function login() {
+  await fetch('/api/login?api_key=sk-realtestsecret12345', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({user: 'ada', password: 'hunter2trombone'}),
   });
 }
 </script>
@@ -62,6 +70,11 @@ def _make_handler(write_dir: pathlib.Path):
                 # The real side effect being proven here: a click leads to
                 # a network request leads to a file actually being written.
                 (write_dir / "saved.json").write_bytes(body)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"ok": true}')
+            elif self.path.startswith("/api/login"):
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
@@ -121,6 +134,24 @@ class TestCaptureLive(unittest.TestCase):
 
         self.assertTrue((self.watch_dir / "saved.json").exists())
         self.assertIn("saved.json", c.result["changes"]["added"])
+
+    def test_a_real_credential_a_real_browser_actually_sent_is_redacted(self):
+        """A real Chromium, a real fetch, with a real (test) API key in the
+        URL and a real password in the JSON POST body -- the exact leak
+        shape the audit found capture() had zero redaction for. Checks
+        the captured output, not the page's own JS, since the whole
+        point of this package is not trusting self-report."""
+        with capture(self.page, task="login") as c:
+            self.page.click("#login")
+            self.page.wait_for_timeout(200)
+
+        login_calls = [r for r in c.requests if "/api/login" in r["url"]]
+        self.assertEqual(len(login_calls), 1)
+        raw = json.dumps(c.to_dict())
+        self.assertNotIn("sk-realtestsecret12345", raw)
+        self.assertNotIn("hunter2trombone", raw)
+        self.assertIn("[REDACTED]", login_calls[0]["url"])
+        self.assertIn("[REDACTED]", login_calls[0]["post_data"])
 
     def test_no_interaction_means_no_requests_captured(self):
         with capture(self.page, task="do nothing") as c:

@@ -17,15 +17,16 @@ import hashlib
 import json
 import time
 
-try:
-    from receipt.snapshot import diff as _diff
-    from receipt.snapshot import snapshot as _snapshot
-except ImportError:
-    # Filesystem watching is optional -- network capture alone is useful
-    # on its own (a purely client-side interaction with no local backend
-    # to watch), so receipt-evidence stays an optional extra, not a hard
-    # dependency of the whole package.
-    _snapshot = _diff = None
+from receipt.redact import redact
+from receipt.snapshot import diff as _diff
+from receipt.snapshot import snapshot as _snapshot
+
+# receipt-evidence is a hard dependency (see pyproject.toml) precisely
+# because of redact() above: a captured URL or POST body can carry a
+# real credential (an API key in a query string, a password in a form
+# submit), and that's not something a caller should have to opt into
+# safety for by installing an extra. snapshot()/diff() ride along on the
+# same dependency for the optional watch_dir feature.
 
 
 def _safe(getter):
@@ -58,11 +59,15 @@ class Capture:
         self._before_snapshot: dict | None = None
 
     def _on_response(self, response) -> None:
+        # url and post_data are redacted -- a real interaction can easily
+        # carry an API key in a query string or a password in a form
+        # submit, and a receipt is meant to be kept and handed to someone
+        # else as evidence, not a second place that credential now lives.
         req = response.request
         self.requests.append({
-            "url": _safe(lambda: req.url),
+            "url": redact(_safe(lambda: req.url)),
             "method": _safe(lambda: req.method),
-            "post_data": _safe(lambda: req.post_data),
+            "post_data": redact(_safe(lambda: req.post_data)),
             "resource_type": _safe(lambda: req.resource_type),
             "status": _safe(lambda: response.status),
             "failure": None,
@@ -74,9 +79,9 @@ class Capture:
         # error during the interaction is on the record too, not silently
         # absent because there was never a response to hang it off of.
         self.requests.append({
-            "url": _safe(lambda: request.url),
+            "url": redact(_safe(lambda: request.url)),
             "method": _safe(lambda: request.method),
-            "post_data": _safe(lambda: request.post_data),
+            "post_data": redact(_safe(lambda: request.post_data)),
             "resource_type": _safe(lambda: request.resource_type),
             "status": None,
             "failure": _safe(lambda: request.failure),

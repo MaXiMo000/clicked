@@ -46,8 +46,7 @@ Chromium, clicking a real button, against a real local HTTP server.)
 ## Install
 
 ```
-pip install clicked-evidence               # network capture only
-pip install "clicked-evidence[filesystem]"  # + the watch_dir feature below
+pip install clicked-evidence
 ```
 
 For once, no PyPI name-squatting to work around -- both `clicked` and
@@ -73,7 +72,18 @@ the block (URL, method, POST body, status, or a `failure` reason if the
 request never got a response at all). This is what was actually sent and
 actually came back -- not what the page's own JavaScript claims it sent.
 
-### The `filesystem` extra
+## Redaction
+
+`url` and `post_data` are swept through
+[`receipt.redact`](https://github.com/MaXiMo000/receipt) before being
+stored -- a real interaction routinely carries a credential in a query
+string (`?api_key=...`) or a form/JSON POST body (`{"password": "..."}`),
+and a receipt is meant to be kept and handed to someone else as evidence,
+not a second place that credential now lives. Same regex-based, best-
+effort sweep `receipt` and `custody` already use, not exhaustive -- see
+receipt's own README for what it doesn't catch.
+
+### Watching the filesystem too
 
 Pass `watch_dir` to also snapshot-diff a local directory before and after
 the interaction, reusing `receipt.snapshot`'s real `snapshot()`/`diff()`
@@ -89,9 +99,8 @@ print(c.result["changes"])  # {"added": ["saved.json"], "modified": [], ...}
 
 This closes the loop from *client* interaction to *backend* side effect --
 proving the click didn't just send a request that returned 200, but that
-a real file actually landed on disk because of it. Requires `pip install
-"clicked-evidence[filesystem]"`; without it, `watch_dir` is silently
-ignored and `capture()` still works for network-only verification.
+a real file actually landed on disk because of it. `watch_dir=None` (the
+default) skips this step entirely; no extra install needed either way.
 
 ### Why no CLI
 
@@ -107,25 +116,25 @@ everything else in this portfolio without needing its own entry point.
 
 `capture()` only calls `.on()` and `.remove_listener()` on whatever object
 you pass it -- duck-typed, not a hard dependency on Playwright or any
-particular version of it. `receipt-evidence` (the `filesystem` extra) is
-the one real dependency this package has, and it's optional because
-network capture is useful entirely on its own for a purely client-side
-interaction with nothing local to watch.
+particular version of it. `receipt-evidence` is the one real dependency
+this package has -- a hard one, not an extra, because redaction (above)
+is part of the core network-capture path, not an opt-in feature; it's
+also itself dependency-free, so this stays a light install either way.
 
 ## Tests
 
 ```
-pip install -e ".[filesystem]"
+pip install -e "."
 python tests/test_capture.py         # pure logic, a fake page object, no browser needed
 ```
 
 ```
-pip install -e ".[filesystem]" playwright
+pip install -e "." playwright
 python -m playwright install chromium
 python tests/test_capture_live.py    # real Chromium, real HTTP server, real network + filesystem effects
 ```
 
-11 tests total (8 + 3). The live suite is the one that actually matters
+17 tests total (13 + 4). The live suite is the one that actually matters
 for a package whose whole point is "did this really happen" -- it skips
 cleanly, rather than failing, if Playwright or its browser binary isn't
 installed.

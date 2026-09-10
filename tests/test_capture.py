@@ -64,6 +64,42 @@ class TestCapture(unittest.TestCase):
             page._fire("response", FakeResponse(FakeRequest("https://a.example.com/2")))
         self.assertEqual(len(c.requests), 2)
 
+    def test_a_credential_in_the_url_is_redacted(self):
+        # Real leak shape: an API key passed as a query param, or a DSN-style
+        # credentialed URL -- the exact bug class receipt.redact exists for.
+        page = FakePage()
+        with capture(page, task="load report") as c:
+            page._fire("response", FakeResponse(FakeRequest(
+                "https://api.example.com/report?api_key=sk-supersecret12345")))
+        self.assertNotIn("sk-supersecret12345", c.requests[0]["url"])
+        self.assertIn("[REDACTED]", c.requests[0]["url"])
+
+    def test_a_credential_in_post_data_is_redacted(self):
+        page = FakePage()
+        with capture(page, task="log in") as c:
+            page._fire("response", FakeResponse(FakeRequest(
+                "https://api.example.com/login", "POST",
+                post_data='{"password": "hunter2trombone"}')))
+        self.assertNotIn("hunter2trombone", c.requests[0]["post_data"])
+
+    def test_a_failed_requests_url_and_post_data_are_also_redacted(self):
+        # _on_request_failed is a separate code path from _on_response --
+        # a fix to one alone would leave the other leaking.
+        page = FakePage()
+        with capture(page, task="submit") as c:
+            page._fire("requestfailed", FakeRequest(
+                "https://api.example.com/x?token=ghp_abcdefghijklmnopqrst1234",
+                post_data="PASSWORD=hunter2trombone",
+                failure="net::ERR_FAILED"))
+        self.assertNotIn("ghp_abcdefghijklmnopqrst1234", c.requests[0]["url"])
+        self.assertNotIn("hunter2trombone", c.requests[0]["post_data"])
+
+    def test_a_url_with_no_credential_is_left_unredacted(self):
+        page = FakePage()
+        with capture(page, task="browse") as c:
+            page._fire("response", FakeResponse(FakeRequest("https://example.com/orders/42")))
+        self.assertEqual(c.requests[0]["url"], "https://example.com/orders/42")
+
     def test_a_failed_request_is_recorded_with_no_status(self):
         page = FakePage()
         with capture(page, task="submit form") as c:

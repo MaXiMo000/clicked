@@ -19,25 +19,23 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Software Development :: Testing",
 ]
-# Zero hard dependencies -- Playwright is duck-typed, never imported here,
-# so whichever version (or, in principle, another library with the same
-# .on()/.remove_listener() shape) the caller already depends on is used
-# as-is. See the `filesystem` extra below for the one real dependency
-# this package does have, and why it's optional.
-dependencies = []
+# Playwright is duck-typed, never imported here, so whichever version (or,
+# in principle, another library with the same .on()/.remove_listener()
+# shape) the caller already depends on is used as-is. receipt-evidence is
+# the one real dependency this package has -- it's a hard one, not an
+# extra, because capture()'s core network recording redacts every URL and
+# POST body through receipt.redact before storing it (a credential in a
+# query string or form submit is a real, common shape, not an edge case),
+# and that safety shouldn't be something a caller has to opt into by
+# installing an extra. receipt-evidence is itself dependency-free, so this
+# stays a light install. snapshot()/diff() ride along on the same
+# dependency for the optional watch_dir feature.
+dependencies = ["receipt-evidence>=0.1.1"]  # 0.1.1: redact.py's quoted-key fix, needed for JSON POST bodies
 
 urls.Homepage = "https://github.com/MaXiMo000/clicked"
 urls.Source = "https://github.com/MaXiMo000/clicked"
 urls.Issues = "https://github.com/MaXiMo000/clicked/issues"
 urls.Changelog = "https://github.com/MaXiMo000/clicked/releases"
-
-[project.optional-dependencies]
-# receipt.snapshot's real snapshot()/diff() core, reused (not
-# reimplemented) for the optional watch_dir feature -- the same "third
-# generation of receipt" pattern custody already uses. Optional because
-# network capture alone is useful on its own, for a purely client-side
-# interaction with no local backend to watch.
-filesystem = ["receipt-evidence>=0.1.0"]
 
 [build-system]
 requires = ["setuptools>=77"]
