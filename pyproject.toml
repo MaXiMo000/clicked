@@ -5,15 +5,15 @@
 # library, imported from a caller's own browser-automation script, not a
 # CLI tool -- see README's "Why no CLI").
 name = "clicked-evidence"
-version = "0.1.0"
-description = "Prove what one browser interaction actually did -- every network request it made, and optionally what changed on a local backing store."
+version = "0.2.0"
+description = "Deprecated: now part of receipt-evidence. Installs it and keeps old imports working."
 requires-python = ">=3.10"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 keywords = ["browser", "playwright", "testing", "evidence", "provenance", "e2e"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 7 - Inactive",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
@@ -30,7 +30,7 @@ classifiers = [
 # installing an extra. receipt-evidence is itself dependency-free, so this
 # stays a light install. snapshot()/diff() ride along on the same
 # dependency for the optional watch_dir feature.
-dependencies = ["receipt-evidence>=0.1.1"]  # 0.1.1: redact.py's quoted-key fix, needed for JSON POST bodies
+dependencies = ["receipt-evidence>=0.2.0"]
 
 urls.Homepage = "https://github.com/MaXiMo000/clicked"
 urls.Source = "https://github.com/MaXiMo000/clicked"
