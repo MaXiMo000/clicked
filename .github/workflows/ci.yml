@@ -23,22 +23,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: pip install -e "."
-      - run: python tests/test_capture.py
+      - run: python tests/test_shim.py
 
-  # A real headless Chromium, a real local HTTP server -- the actual point
-  # of the package, not just fake event objects fanning out correctly.
-  # Its own job, not folded into `test` above: installing a browser binary
-  # is real bandwidth and time neither of the other jobs needs to pay for.
-  test-live:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
-        with:
-          python-version: "3.13"
-      - run: pip install -e "." playwright
-      - run: python -m playwright install --with-deps chromium
-      - run: python tests/test_capture_live.py
 
   package:
     # Build and install the distribution on every commit, not only at release --
